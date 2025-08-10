@@ -1,169 +1,54 @@
-import os
-from pathlib import Path
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
 from datetime import datetime
+from .database import Base
 
-from fastapi import FastAPI, Request, Depends, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.status import HTTP_303_SEE_OTHER
+class Will(Base):
+    __tablename__ = "wills"
 
-from .database import get_db, init_db
-from .models import Will
-from .pdf import build_will_pdf
-from .security import require_admin, set_admin_session, clear_admin_session, is_admin
-from .trust_clauses import TRUST_TYPES, make_trust_clause
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-BASE_DIR = Path(__file__).resolve().parent
-TEMPLATES_DIR = BASE_DIR / "templates"
-STATIC_DIR = BASE_DIR / "static"
+    # Core client details
+    client_name = Column(String(255))
+    dob = Column(String(64))
+    address = Column(Text)
+    marital_status = Column(String(64), nullable=True)
+    partner_name = Column(String(255), nullable=True)
+    children = Column(Text, nullable=True)  # names/DOBs, one per line
 
-DATA_DIR = Path(os.getenv("DATA_DIR", "/data"))
-PDF_DIR = DATA_DIR / "pdfs"
+    # Executors & Guardians
+    executors = Column(Text, nullable=True)
+    replacement_executors = Column(Text, nullable=True)
+    guardians = Column(Text, nullable=True)
 
-app = FastAPI(title="ELATCO Will & Trust System")
+    # Gifts
+    gifts_cash = Column(Text, nullable=True)         # £X to Person A … (one per line)
+    gifts_specific = Column(Text, nullable=True)     # items / chattels to individuals
+    charity_gifts = Column(Text, nullable=True)      # gifts to charities
 
-# Sessions (required for admin login)
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
+    # Estate residue
+    residuary_first_death = Column(Text, nullable=True)   # e.g. “to my spouse/partner absolutely”
+    residuary_second_death = Column(Text, nullable=True)  # ultimate beneficiaries if both die / on survivor’s death
 
-# Static & templates
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-# Make a simple now() available in templates (for footer year, etc.)
-templates.env.globals["now"] = datetime.utcnow
+    # Preferences & Other Matters
+    funeral_wishes = Column(Text, nullable=True)
+    digital_assets = Column(Text, nullable=True)
+    pet_wishes = Column(Text, nullable=True)
+    business_interests = Column(Text, nullable=True)
+    foreign_assets = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
 
-@app.on_event("startup")
-def on_startup():
-    PDF_DIR.mkdir(parents=True, exist_ok=True)
-    init_db()
+    # Trusts
+    trust_type = Column(String(64), default="None")
+    trustees = Column(Text, nullable=True)
+    beneficiaries = Column(Text, nullable=True)
+    age_of_access = Column(String(16), nullable=True)
+    special_clauses = Column(Text, nullable=True)
+    trust_text = Column(Text, nullable=True)
 
-# ---------- Health / Uptime ----------
-@app.head("/")
-async def _head_root():
-    # Render health checks sometimes issue HEAD /
-    return PlainTextResponse("")
+    # Mirroring
+    is_mirrored_pair = Column(Boolean, default=False)     # true if created as a mirrored set
+    mirror_group = Column(Integer, nullable=True)         # simple group id to link the pair (same number for both)
 
-@app.get("/healthz")
-async def _healthz():
-    return {"ok": True}
-
-# ---------- Public ----------
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "trust_types": TRUST_TYPES, "admin": is_admin(request)}
-    )
-
-@app.get("/client/start", response_class=HTMLResponse)
-async def client_start(request: Request):
-    return templates.TemplateResponse(
-        "client_will_form.html",
-        {"request": request, "trust_types": TRUST_TYPES}
-    )
-
-@app.post("/client/submit")
-async def client_submit(
-    request: Request,
-    db = Depends(get_db),
-    full_name: str = Form(...),
-    dob: str = Form(""),
-    address: str = Form(""),
-    executors: str = Form(""),
-    gifts: str = Form(""),
-    residuary: str = Form("To my residuary beneficiaries equally."),
-    trust_discretionary: str = Form(None),
-    trust_life_interest: str = Form(None),
-    trust_property: str = Form(None),
-):
-    # Map simple checkboxes to a single trust type (can be extended later)
-    trust_type = "None"
-    if trust_discretionary: trust_type = "Discretionary Trust"
-    if trust_life_interest: trust_type = "Life Interest Trust"
-    if trust_property: trust_type = "Property Protection Trust"
-
-    trust_text = make_trust_clause(
-        trust_type=trust_type,
-        trustees="the Trustees named in this Will",
-        beneficiaries="the Beneficiaries named in this Will",
-        age_of_access="18",
-        special="",
-    )
-
-    will = Will(
-        client_name=full_name.strip(),
-        dob=dob.strip(),
-        address=address.strip(),
-        executors=executors.strip(),
-        gifts=gifts.strip(),
-        residuary=residuary.strip(),
-        trust_type=trust_type,
-        trust_text=trust_text,
-        created_at=datetime.utcnow(),
-    )
-
-    db.add(will)
-    db.commit()
-    db.refresh(will)
-
-    # Generate & persist PDF (to DATA_DIR, which on Free plan should be /tmp)
-    pdf_bytes = build_will_pdf(will)
-    filename = f"will_{will.id}.pdf"
-    file_path = PDF_DIR / filename
-    with open(file_path, "wb") as f:
-        f.write(pdf_bytes)
-
-    will.pdf_filename = filename
-    db.commit()
-
-    return RedirectResponse(url=f"/admin/will/{will.id}", status_code=HTTP_303_SEE_OTHER)
-
-# ---------- Admin ----------
-@app.get("/admin/login", response_class=HTMLResponse)
-async def admin_login_page(request: Request):
-    return templates.TemplateResponse("admin_login.html", {"request": request})
-
-@app.post("/admin/login")
-async def admin_login(request: Request, email: str = Form(...), password: str = Form(...)):
-    if set_admin_session(request, email, password):
-        return RedirectResponse("/admin/dashboard", status_code=HTTP_303_SEE_OTHER)
-    return templates.TemplateResponse("admin_login.html", {"request": request, "error": "Invalid credentials"})
-
-@app.get("/admin/logout")
-async def admin_logout(request: Request):
-    clear_admin_session(request)
-    return RedirectResponse("/", status_code=HTTP_303_SEE_OTHER)
-
-@app.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request, db = Depends(get_db)):
-    require_admin(request)
-    wills = db.query(Will).order_by(Will.created_at.desc()).all()
-    return templates.TemplateResponse("admin_dashboard.html", {"request": request, "wills": wills})
-
-@app.get("/admin/will/{will_id}", response_class=HTMLResponse)
-async def admin_will_detail(request: Request, will_id: int, db = Depends(get_db)):
-    require_admin(request)
-    will = db.query(Will).get(will_id)
-    if not will:
-        raise HTTPException(status_code=404, detail="Will not found")
-    return templates.TemplateResponse("will_detail.html", {"request": request, "will": will})
-
-@app.get("/admin/will/{will_id}/download")
-async def download_will_pdf(request: Request, will_id: int, db = Depends(get_db)):
-    require_admin(request)
-    will = db.query(Will).get(will_id)
-    if not will or not will.pdf_filename:
-        raise HTTPException(status_code=404, detail="PDF not found")
-    file_path = PDF_DIR / will.pdf_filename
-    if not file_path.exists():
-        # Rebuild if missing
-        pdf_bytes = build_will_pdf(will)
-        with open(file_path, "wb") as f:
-            f.write(pdf_bytes)
-    return StreamingResponse(
-        open(file_path, "rb"),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={will.pdf_filename}"}
-    )
+    # Output
+    pdf_filename = Column(String(255), nullable=True)
