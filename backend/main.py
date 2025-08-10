@@ -31,7 +31,8 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
 # Static & templates
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-
+from datetime import datetime
+templates.env.globals["now"] = datetime.utcnow
 @app.on_event("startup")
 def on_startup():
     PDF_DIR.mkdir(parents=True, exist_ok=True)
