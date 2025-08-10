@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 
 from fastapi import FastAPI, Request, Depends, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -24,19 +24,30 @@ PDF_DIR = DATA_DIR / "pdfs"
 
 app = FastAPI(title="ELATCO Will & Trust System")
 
-# Session secret
+# Sessions (required for admin login)
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
 
 # Static & templates
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-from datetime import datetime
+# Make a simple now() available in templates (for footer year, etc.)
 templates.env.globals["now"] = datetime.utcnow
+
 @app.on_event("startup")
 def on_startup():
     PDF_DIR.mkdir(parents=True, exist_ok=True)
     init_db()
+
+# ---------- Health / Uptime ----------
+@app.head("/")
+async def _head_root():
+    # Render health checks sometimes issue HEAD /
+    return PlainTextResponse("")
+
+@app.get("/healthz")
+async def _healthz():
+    return {"ok": True}
 
 # ---------- Public ----------
 @app.get("/", response_class=HTMLResponse)
@@ -48,7 +59,10 @@ async def home(request: Request):
 
 @app.get("/client/start", response_class=HTMLResponse)
 async def client_start(request: Request):
-    return templates.TemplateResponse("client_will_form.html", {"request": request, "trust_types": TRUST_TYPES})
+    return templates.TemplateResponse(
+        "client_will_form.html",
+        {"request": request, "trust_types": TRUST_TYPES}
+    )
 
 @app.post("/client/submit")
 async def client_submit(
@@ -64,7 +78,7 @@ async def client_submit(
     trust_life_interest: str = Form(None),
     trust_property: str = Form(None),
 ):
-    # Map the simple checkboxes to one trust type (you can enhance later)
+    # Map simple checkboxes to a single trust type (can be extended later)
     trust_type = "None"
     if trust_discretionary: trust_type = "Discretionary Trust"
     if trust_life_interest: trust_type = "Life Interest Trust"
@@ -75,7 +89,7 @@ async def client_submit(
         trustees="the Trustees named in this Will",
         beneficiaries="the Beneficiaries named in this Will",
         age_of_access="18",
-        special=""
+        special="",
     )
 
     will = Will(
@@ -94,7 +108,7 @@ async def client_submit(
     db.commit()
     db.refresh(will)
 
-    # Generate & store PDF bytes
+    # Generate & persist PDF (to DATA_DIR, which on Free plan should be /tmp)
     pdf_bytes = build_will_pdf(will)
     filename = f"will_{will.id}.pdf"
     file_path = PDF_DIR / filename
