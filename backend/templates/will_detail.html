@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Will #{{ will.id }} – {{ will.client_name }}</h2>
+  <p><strong>Created:</strong> {{ will.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+  {% if will.trust_type != 'None' %}
+    <p><strong>Trust:</strong> {{ will.trust_type }}</p>
+  {% endif %}
+
+  <div class="actions">
+    <a class="btn" href="/admin/will/{{ will.id }}/download">Download PDF</a>
+    <a class="btn btn-secondary" href="/admin/dashboard">Back</a>
+  </div>
+
+  <hr>
+  <h3>Summary</h3>
+  <ul>
+    <li><strong>DOB:</strong> {{ will.dob }}</li>
+    <li><strong>Address:</strong> {{ will.address }}</li>
+    <li><strong>Executors:</strong> <pre>{{ will.executors }}</pre></li>
+    <li><strong>Guardians:</strong> <pre>{{ will.guardians }}</pre></li>
+    <li><strong>Gifts:</strong> <pre>{{ will.gifts }}</pre></li>
+    <li><strong>Residuary:</strong> <pre>{{ will.residuary }}</pre></li>
+    {% if will.trust_type != 'None' %}
+      <li><strong>Trust Provisions:</strong> <div class="clause">{{ will.trust_text|safe }}</div></li>
+    {% endif %}
+    {% if will.special_clauses %}
+      <li><strong>Additional Clauses:</strong> <pre>{{ will.special_clauses }}</pre></li>
+    {% endif %}
+  </ul>
+{% endblock %}
