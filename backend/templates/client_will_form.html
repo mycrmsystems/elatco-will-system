@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Client Will Form</h1>
+  <p>Please provide the following details to build your will. Fields marked * are required.</p>
+
+  <form method="post" action="/client/submit">
+    <label>Full Name *<br>
+      <input type="text" name="full_name" required>
+    </label>
+
+    <label>Address *<br>
+      <textarea name="address" required></textarea>
+    </label>
+
+    <label>Date of Birth *<br>
+      <input type="date" name="dob" required>
+    </label>
+
+    <h3>Trust Options</h3>
+    <label>
+      <input type="checkbox" name="trust_discretionary">
+      Discretionary Trust
+    </label>
+    <label>
+      <input type="checkbox" name="trust_life_interest">
+      Life Interest Trust
+    </label>
+    <label>
+      <input type="checkbox" name="trust_property">
+      Property Protection Trust
+    </label>
+
+    <h3>Executor(s)</h3>
+    <label>
+      <textarea name="executors" placeholder="Enter names and addresses"></textarea>
+    </label>
+
+    <h3>Specific Gifts</h3>
+    <label>
+      <textarea name="gifts" placeholder="Describe any gifts to individuals or organisations"></textarea>
+    </label>
+
+    <h3>Residuary Estate</h3>
+    <label>
+      <textarea name="residuary" placeholder="Describe who will receive the remainder of the estate"></textarea>
+    </label>
+
+    <button type="submit" class="btn">Generate Will</button>
+  </form>
+{% endblock %}
