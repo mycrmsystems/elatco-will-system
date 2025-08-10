@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or 'ELATCO Will & Trust System' }}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container flex between">
+        <div class="brand">ELATCO – Will & Trust</div>
+        <nav>
+          <a href="/">Home</a>
+          <a href="/client/start">Start Will</a>
+          {% if admin %}
+            <a href="/admin/dashboard">Admin</a>
+            <a href="/admin/logout">Logout</a>
+          {% else %}
+            <a href="/admin/login">Adviser Login</a>
+          {% endif %}
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="container small">
+        © {{ now().year }} ELATCO • For professional review only. This system generates template wording.
+      </div>
+    </footer>
+  </body>
+</html>
