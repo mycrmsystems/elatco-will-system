@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Welcome to ELATCO’s Will & Trust System</h1>
+  <p class="lead">
+    Create a professionally structured Will with optional trust wording. Clients can step through the journey; advisers can review in the Admin area.
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Start a Will</h3>
+      <p>Guided questions for personal details, executors, gifts, residuary estate and trusts.</p>
+      <a href="/client/start" class="btn">Begin</a>
+    </div>
+
+    <div class="card">
+      <h3>Adviser Login</h3>
+      <p>Review client entries, regenerate PDFs, and manage outputs.</p>
+      <a href="/admin/login" class="btn btn-secondary">Admin Area</a>
+    </div>
+  </div>
+{% endblock %}
