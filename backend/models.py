@@ -15,6 +15,7 @@ class Will(Base):
 
     # Will content
     executors = Column(Text)
+    guardians = Column(Text)
     gifts = Column(Text)
     residuary = Column(Text)
 
