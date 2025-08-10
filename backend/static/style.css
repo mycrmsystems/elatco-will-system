@@ -1,0 +1,111 @@
+/* ELATCO Colour Scheme */
+:root {
+  --primary: #004c6d; /* Deep blue from ELATCO site */
+  --secondary: #a78e44; /* Gold accent */
+  --light-bg: #f9f9f9;
+  --text: #333;
+}
+
+/* Reset & Base */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background-color: var(--light-bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header & Footer */
+.site-header, .site-footer {
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 20px;
+}
+
+.site-header .brand {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.site-header nav a {
+  color: white;
+  margin-left: 15px;
+  text-decoration: none;
+}
+
+.site-header nav a:hover {
+  text-decoration: underline;
+}
+
+.site-footer {
+  font-size: 0.9em;
+  text-align: center;
+}
+
+/* Buttons */
+.btn {
+  background-color: var(--primary);
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  text-decoration: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.btn:hover {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary);
+}
+
+/* Cards */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 8px;
+  border: 1px solid #ccc;
+}
+
+.alert {
+  padding: 10px;
+  background-color: #fdd;
+  border: 1px solid #c00;
+  margin-bottom: 15px;
+}
+
+pre {
+  background: #eee;
+  padding: 8px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
