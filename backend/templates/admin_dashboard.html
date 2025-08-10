@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Admin Dashboard</h2>
+
+  {% if not wills %}
+    <p>No wills yet.</p>
+  {% else %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Client</th>
+          <th>Created</th>
+          <th>Trust Type</th>
+          <th>PDF</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in wills %}
+        <tr>
+          <td>{{ w.id }}</td>
+          <td>{{ w.client_name }}</td>
+          <td>{{ w.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ w.trust_type }}</td>
+          <td>{% if w.pdf_filename %}✅{% else %}—{% endif %}</td>
+          <td><a class="btn btn-small" href="/admin/will/{{ w.id }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
