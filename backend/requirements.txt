@@ -1,6 +1,2 @@
-fastapi
-uvicorn
-sqlalchemy
-jinja2
-python-multipart
-reportlab
+delete misplaced requirements file
+
